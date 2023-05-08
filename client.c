@@ -38,7 +38,6 @@ void	send_signals(int pid, char *message)
 	int	bit;
 
 	character = 0;
-	//bit = 0;
 	while (message[character] != '\0')
 	{
 		bit = 0;
@@ -57,13 +56,20 @@ void	send_signals(int pid, char *message)
 
 int	main(int argc, char **argv)
 {
-	if (argc != 3 || ft_atoi(argv[1]) <= 0) // || ft_atoi(argv[2]) == 0)
+	int i;
+	
+	i = 2;
+	if (argc < 3 || ft_atoi(argv[1]) <= 0)
 	{
 		printf("invalid argument(s) or format!\n");
 		printf("expected: ./client <serverPID> <MESSAGE>\n");
 		exit(1);
 	}
-	send_signals(ft_atoi(argv[1]), argv[2]);
+	while (argv[i])
+	{
+		send_signals(ft_atoi(argv[1]), argv[i]);
+		i++;
+	}
 	return (0);
 }
 
@@ -77,23 +83,17 @@ H 072 01001000
 				
 				01001000("H") & 00000100 ---> 00000000
 					00000001 << 2 --> 00000100 (checks if we have a 1 in the 3rd position)
-
 				01001000("H") & 00001000 ---> 00000100
 					00000001 << 3 --> 00001000
 				
 				01001000("H") & 00010000 ---> 00000000
 					00000001 << 4 --> 00010000
-
 				01001000("H)") & 00100000 ---> 00000000
 					00000001 << 5 --> 00100000
-
 				01001000("H)") & 01000000 ---> 01000000
 					00000001 << 6 --> 01000000
-
 				01001000("H)") & 10000000 ---> 00000000
 					00000001 << 7 --> 10000000
-
 		SIGURG	2-2-2-1-2-2-1-2
 				0 0 0 1 0 0 1 0
-
 i 105 */
