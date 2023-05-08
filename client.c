@@ -62,7 +62,7 @@ int	main(int argc, char **argv)
 	if (argc < 3 || ft_atoi(argv[1]) <= 0)
 	{
 		printf("invalid argument(s) or format!\n");
-		printf("expected: ./client <serverPID> <MESSAGE>\n");
+		printf("expected: ./client <serverPID> <\"MESSAGE\">\n");
 		exit(1);
 	}
 	while (argv[i])
