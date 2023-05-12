@@ -7,20 +7,28 @@
 void signal_handler(int signum, siginfo_t *info, void *context)
 {
 	static int	bit = 0;
+	static int	pid = 0;
 	static char byte = 0;
 	
-//	(void)context;
+	(void)context;
+	pid = info->si_pid;
 	if (signum == SIGUSR1)
 		byte |= (0x01 << bit);
 	bit++;
 	if (bit == 8)
 	{
-		if (byte == 0)
-			kill(info->si_pid, SIGURS2);
-		ft_printf("%c", byte);
 		bit = 0;
+		if(!byte)
+		{
+			kill (pid, SIGUSR1);
+			pid = 0;
+			ft_printf("\n");
+			return;
+		}
+		ft_printf("%c", byte);
 		byte = 0;
 	}
+	kill(pid, SIGUSR2);
 }
 
 /*1st call bit(0)++
@@ -42,15 +50,13 @@ int main(void)
 	struct sigaction	action;
 
 	pid = getpid();
-	printf("Welcome!\nServer's PID: %d\n", pid);
-	action.sa_sigaction = signal_handler;
+	ft_printf("Welcome!\nServer's PID: %d\n", pid);
 	sigemptyset(&action.sa_mask);
-	action.sa_flags = 0;
+	action.sa_flags = SA_SIGINFO;
+	action.sa_sigaction = signal_handler;
+	sigaction(SIGUSR1, &action, NULL);
+	sigaction(SIGUSR2, &action, NULL);
 	while(1)
-	{
-		sigaction(SIGUSR1, &action, NULL);
-		sigaction(SIGUSR2, &action, NULL);
 		pause();
-	}
 	return (0);
 }

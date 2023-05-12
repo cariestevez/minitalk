@@ -2,6 +2,9 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "ft_printf/ft_printf.h"
+
+static int	terminator;
 
 int	ft_atoi(const char *nptr)
 {
@@ -32,56 +35,72 @@ int	ft_atoi(const char *nptr)
 	return (number * sign);
 }
 
-void	confirm_msg(int signum)
+void	send_signals(int pid, char character)
 {
-	if (signum == SIGUSR2)
-		printf("message received\n");
+	int	timer;
+	int	bit_index;
+
+	timer = 0;
+	bit_index = 0;
+	while(bit_index < 8)
+	{
+		timer = 0;
+		if (character & (0x01 << bit_index))
+			kill(pid, SIGUSR1);
+		else
+			kill(pid, SIGUSR2);
+		while (terminator == 0)
+		{
+			if (timer == 100)
+				printf("NO RESPONSE FROM SERVER :(\n)");
+			timer++;
+			usleep(100);
+		}
+		terminator = 0;
+		bit_index++;
+	}
 }
 
-void	send_signals(int pid, char *message)
+void signal_confirm(int signum, siginfo_t *info, void *context)
 {
-	int	character;
-	int	bit;
-
-	character = 0;
-	while (message[character] != '\0')
+	static int	bit = 0;
+	
+	terminator = 1;
+	(void)context;
+	(void)info;
+	if (signum == SIGUSR2)
+		bit++;
+	else if (signum == SIGUSR1)
 	{
-		bit = 0;
-		while(bit < 8)
-		{
-			if ((message[character] & (0x01 << bit)))
-				kill(pid, SIGUSR1);
-			else
-				kill(pid, SIGUSR2);
-			usleep(100);
-			bit++;
-		}
-		character++;
-	}
-	while (bit > 0)
-	{
-		kill(pid, SIGUSR2);
-		bit--;
+		ft_printf("MSG SENT, %d bytes RECEIVED BACK FROM SERVER \n", bit/8);
+		exit(0);
 	}
 }
 
 int	main(int argc, char **argv)
 {
-	int i;
-	
-	i = 2;
-	if (argc < 3 || ft_atoi(argv[1]) <= 0)
+	struct sigaction	action;
+	static int	i = 0;
+
+	sigemptyset(&action.sa_mask);
+	action.sa_flags = SA_SIGINFO;
+	action.sa_sigaction = signal_confirm;
+	sigaction(SIGUSR1, &action, NULL);
+	sigaction(SIGUSR2, &action, NULL);
+	if (argc != 3 || ft_atoi(argv[1]) <= 0)
 	{
-		printf("invalid argument(s) or format!\n");
-		printf("expected: ./client <serverPID> <\"MESSAGE\">\n");
+		ft_printf("invalid argument(s) or format!\n");
+		ft_printf("expected: ./client <serverPID> <\"MESSAGE\">\n");
 		exit(1);
 	}
-	while (argv[i])
+	while (argv[2][i] != '\0')
 	{
-		send_signals(ft_atoi(argv[1]), argv[i]);
+		send_signals(ft_atoi(argv[1]), argv[2][i]);
 		i++;
 	}
-	signal(SIGUSR2, confirm_msg);
+	send_signals(ft_atoi(argv[1]), '\0');
+	while(1)
+		pause();
 	return (0);
 }
 
@@ -95,23 +114,17 @@ H 072 01001000
 				
 				01001000("H") & 00000100 ---> 00000000
 					00000001 << 2 --> 00000100 (checks if we have a 1 in the 3rd position)
-
 				01001000("H") & 00001000 ---> 00000100
 					00000001 << 3 --> 00001000
 				
 				01001000("H") & 00010000 ---> 00000000
 					00000001 << 4 --> 00010000
-
 				01001000("H)") & 00100000 ---> 00000000
 					00000001 << 5 --> 00100000
-
 				01001000("H)") & 01000000 ---> 01000000
 					00000001 << 6 --> 01000000
-
 				01001000("H)") & 10000000 ---> 00000000
 					00000001 << 7 --> 10000000
-
 		SIGURG	2-2-2-1-2-2-1-2
 				0 0 0 1 0 0 1 0
-
 i 105 */
