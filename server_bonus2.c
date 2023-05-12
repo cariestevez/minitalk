@@ -2,24 +2,32 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "ft_printf/ft_printf.h"
+//#include "ft_printf/ft_printf.h"
 
 void signal_handler(int signum, siginfo_t *info, void *context)
 {
 	static int	bit = 0;
+	static int	pid = 0;
 	static char byte = 0;
 	
 	(void)context;
+	pid = info->si_pid;
 	if (signum == SIGUSR1)
 		byte |= (0x01 << bit);
 	bit++;
 	if (bit == 8)
 	{
-		ft_printf("%c", byte);
 		bit = 0;
+		if(!byte)
+		{
+			kill (pid, SIGUSR1);
+			pid = 0;
+			return;
+		}
+		printf("%c", byte);
 		byte = 0;
 	}
-	kill(info->si_pid, SIGUSR1);
+	kill(pid, SIGUSR2);
 }
 
 /*1st call bit(0)++
@@ -42,9 +50,9 @@ int main(void)
 
 	pid = getpid();
 	printf("Welcome!\nServer's PID: %d\n", pid);
-	action.sa_sigaction = signal_handler;
 	sigemptyset(&action.sa_mask);
 	action.sa_flags = SA_SIGINFO;
+	action.sa_sigaction = signal_handler;
 	sigaction(SIGUSR1, &action, NULL);
 	sigaction(SIGUSR2, &action, NULL);
 	while(1)
