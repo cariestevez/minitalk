@@ -2,7 +2,9 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "ft_printf/ft_printf.h"
+//#include "ft_printf/ft_printf.h"
+
+static int	terminator;
 
 int	ft_atoi(const char *nptr)
 {
@@ -33,46 +35,70 @@ int	ft_atoi(const char *nptr)
 	return (number * sign);
 }
 
-void	send_signals(int pid, char *message)
+void	send_signals(int pid, char character)
 {
-	int	character;
-	int	bit;
+	int	i;
+	int	bit_index;
 
-	character = 0;
-	while (message[character])
+	i = 0;
+	bit_index = 0;
+	while(bit_index < 8)
 	{
-		bit = 0;
-		while(bit < 8)
+		i = 0;
+		if (character & (0x01 << bit_index))
+			kill(pid, SIGUSR1);
+		else
+			kill(pid, SIGUSR2);
+		while (terminator == 0)
 		{
-			if ((message[character] & (0x01 << bit)))
-				kill(pid, SIGUSR1);
-			else
-				kill(pid, SIGUSR2);
+			if (i == 100)
+				printf("No response from server :(\n)");
+			i++;
 			usleep(100);
-			bit++;
 		}
-		character++;
+		terminator = 0;
+		bit_index++;
 	}
 }
 
-static void	confirm_msg(int signal)
+void signal_confirm(int signum, siginfo_t *info, void *context)
 {
-	if (signal == SIGUSR1)
-		ft_printf("MESSAGE RECEIVED\n");
+	static int	bit = 0;
+	
+	terminator = 1;
+	(void)context;
+	(void)info;
+	if (signum == SIGUSR2)
+		bit++;
+	else if (signum == SIGUSR1)
+	{
+		printf("MSG SENT, %d bytes RECEIVED BACK FROM SERVER \n", bit/8);
 		exit(0);
+	}
 }
 
 int	main(int argc, char **argv)
 {
+	struct sigaction	action;
+	static int	i = 0;
+
+	sigemptyset(&action.sa_mask);
+	action.sa_flags = SA_SIGINFO;
+	action.sa_sigaction = signal_confirm;
+	sigaction(SIGUSR1, &action, NULL);
+	sigaction(SIGUSR2, &action, NULL);
 	if (argc != 3 || ft_atoi(argv[1]) <= 0)
 	{
-		ft_printf("invalid argument(s) or format!\n");
-		ft_printf("expected: ./client <serverPID> <\"MESSAGE\">\n");
+		printf("invalid argument(s) or format!\n");
+		printf("expected: ./client <serverPID> <\"MESSAGE\">\n");
 		exit(1);
 	}
-	signal(SIGUSR1, confirm_msg);
-	send_signals(ft_atoi(argv[1]), argv[2]);
-//	signal(SIGUSR2, confirm_msg);
+	while (argv[2][i] != '\0')
+	{
+		send_signals(ft_atoi(argv[1]), argv[2][i]);
+		i++;
+	}
+	send_signals(ft_atoi(argv[1]), '\0');
 	while(1)
 		pause();
 	return (0);
